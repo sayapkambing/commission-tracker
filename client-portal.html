@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aruda's Art Commission - Order Tracking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="client-styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-card">
+        <h1><i class="fas fa-lock"></i> Client Portal</h1>
+        <p>Masukkan kode ordernya untuk melihat progress yaa</p>
+        
+        <div class="error-message" id="errorMessage">
+            Kode order gak ada nih. Coba cek lagi yaa.
+        </div>
+
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="orderCode">Kode Order</label>
+                <input type="text" id="orderCode" placeholder="ORDER-12345" required>
+            </div>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-sign-in-alt"></i> Masuk
+            </button>
+        </form>
+
+        <!-- Revision Policy Info -->
+        <div class="info-section">
+            <h3><i class="fas fa-info-circle"></i> Ketentuan</h3>
+            
+            <div class="info-card">
+                <h4>Pembayaran</h4>
+                <ul>
+                    <li>Metode pembayaran melalui Qris yang akan dicantumkan pada invoice.</li>
+                    <li>Sistem pembayaran full paid upfront setelah tahap sketching.</li>
+                    <li>Pembayaran harus dilakukan maksimal dalam 14 hari. 
+                    <li>Pembayaran tidak lunas setelah 30 hari, maka order dibatalkan.</li>
+                    <li>No refund setelah sketch disetujui.</li>
+                </ul>
+            </div>
+
+            <div class="info-card warning">
+                <h4>Deadline & Waktu pengerjaan</h4>
+                <ul>
+                    <li>Waktu pengerjaan: 7–15 hari kerja setelah sketching.</li> 
+                    <li>Bila ada mayor revisi, maka lama deadline bertambah 5–7 hari.</li>
+                    <li>Mohon berikan feedback secepatnya agar pengerjaan tidak tertunda.</li>
+                    <li>Saya akan konfirmasi harga dan estimasi waktu pengerjaan setelah concepting.</li>
+                </ul>
+            </div>
+
+            <p class="info-note">
+                <i class="fas fa-lightbulb"></i> 
+                <strong>Tips:</strong> Berikan feedback yang jelas dan detail untuk hasil terbaik!
+            </p>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard hidden">
+        <div class="dashboard-header">
+            <h1><i class="fas fa-home"></i> Dashboard Saya</h1>
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Keluar
+            </button>
+        </div>
+
+        <div class="orders-grid" id="ordersGrid">
+            <!-- Orders will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="modalClose">&times;</span>
+            
+            <div class="modal-header">
+                <h2 id="modalOrderCode">ORDER-12345</h2>
+                <span class="status-badge" id="modalStatus">In Progress</span>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="overview">
+                    <i class="fas fa-info-circle"></i> Overview
+                </button>
+                <button class="tab" data-tab="workflow">
+                    <i class="fas fa-tasks"></i> Workflow
+                </button>
+                <button class="tab" data-tab="invoice">
+                    <i class="fas fa-file-invoice"></i> Invoice
+                </button>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="overviewTab" class="tab-content active">
+                <div class="detail-section">
+                    <h3>Detail Order</h3>
+                    <div class="detail-grid" id="orderDetailsGrid"></div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Informasi Pembayaran</h3>
+                    <div class="detail-grid" id="paymentDetailsGrid"></div>
+                </div>
+
+                <div class="detail-section" id="revisionSection"></div>
+            </div>
+
+            <!-- Workflow Tab -->
+            <div id="workflowTab" class="tab-content">
+                <div class="detail-section">
+                    <h3>Progress Pengerjaan</h3>
+                    <div class="workflow-stages" id="workflowStages"></div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Keterangan Stage</h3>
+                    <div id="stageDescription"></div>
+                </div>
+            </div>
+
+            <!-- Invoice Tab -->
+            <div id="invoiceTab" class="tab-content">
+                <div class="detail-section">
+                    <h3>Invoice</h3>
+                    <div class="invoice-preview" id="invoicePreview">
+                        <iframe id="invoiceFrame" style="width: 100%; height: 600px; border: none;"></iframe>
+                    </div>
+                    <div class="download-buttons">
+                        <button class="btn-download btn-pdf" id="downloadPDF">
+                            <i class="fas fa-file-pdf"></i> Download PDF
+                        </button>
+                        <button class="btn-download btn-image" id="downloadImage">
+                            <i class="fas fa-image"></i> Download Gambar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCl-vcLE4Mkwgu9A4e7_If0Bwg7fcI9uR0",
+            authDomain: "commission-tracker-aruda.firebaseapp.com",
+            projectId: "commission-tracker-aruda",
+            storageBucket: "commission-tracker-aruda.firebasestorage.app",
+            messagingSenderId: "344230540516",
+            appId: "1:344230540516:web:06be852d8f4472b888a8f1",
+            measurementId: "G-JK565VZ8BS"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.firestore = { collection, query, where, getDocs, doc, getDoc };
+    </script>
+
+    <script src="client-portal.js"></script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="admin-styles.css">
+</head>
+<body>
+    <div id="adminDashboard" class="dashboard">
+        <div class="admin-header">
+            <h1>Order Management</h1>
+            <div>
+                <button class="btn-new" id="newOrderBtn">+ New Order</button>
+            </div>
+        </div>
+ 
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="waitingCount">0</div>
+                <div class="stat-label">Waiting Payment</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="progressCount">0</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="doneCount">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+        </div>
+ 
+        <div class="orders-table-container">
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>Order Code</th>
+                        <th>Client</th>
+                        <th>Status</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+ 
+    <div id="orderFormModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="orderFormClose">&times;</span>
+            <h2 id="orderFormTitle">New Order</h2>
+            <form id="orderForm">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label>Order Code *</label>
+                        <input type="text" id="formOrderCode" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Client Name *</label>
+                        <input type="text" id="formClientName" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Item Name *</label>
+                        <input type="text" id="formItemName" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Total Price *</label>
+                        <input type="number" id="formTotalPrice" required>
+                    </div>
+                    <div class="input-group full-width">
+                        <label>Description</label>
+                        <textarea id="formDescription" rows="3"></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>Payment Deadline (opsional - isi setelah invoice dibuka)</label>
+                        <input type="date" id="formPaymentDeadline">
+                    </div>
+                    <div class="input-group">
+                        <label>Work Deadline (opsional - set after payment)</label>
+                        <input type="date" id="formDeadline">
+                    </div>
+                    <div class="input-group">
+                        <label>Status *</label>
+                        <select id="formStatus" required>
+                            <option value="Waiting Payment">Waiting Payment</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="On Revision">On Revision</option>
+                            <option value="Done">Done</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Canceled">Canceled</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Payment Status</label>
+                        <select id="formPaymentStatus">
+                            <option value="Belum Bayar">Belum Bayar</option>
+                            <option value="DP 50%">DP 50% (Paid)</option>
+                            <option value="Lunas">Lunas (Full Payment)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Payment Type (How Client Want to Pay)</label>
+                        <select id="formPaymentType">
+                            <option value="dp">DP 50% (Down Payment)</option>
+                            <option value="full">Full Payment (Lunas Langsung)</option>
+                        </select>
+                        <small>⚠️ Ini menentukan format invoice yang dilihat client</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Refund Status</label>
+                        <select id="formRefundable">
+                            <option value="yes">Masih Bisa Refund (Belum mulai Visual Sketch)</option>
+                            <option value="no">Tidak Bisa Refund (Sudah mulai Visual Sketch)</option>
+                        </select>
+                        <small>⚠️ Set ke "Tidak Bisa Refund" setelah mulai Visual Sketch</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Current Stage</label>
+                        <select id="formCurrentStage">
+                            <option value="">Not Started</option>
+                            <option value="Concept">Concept</option>
+                            <option value="Sketching">Sketching</option>
+                            <option value="Cleaning">Cleaning</option>
+                            <option value="Rendering">Rendering</option>
+                            <option value="Finishing">Finishing</option>
+                        </select>
+                    </div>
+                    <div class="input-group full-width">
+                        <label>Upload Progress Art (untuk stage saat ini)</label>
+                        <input type="file" id="formProgressArt" accept="image/*">
+                        <small>Upload gambar progress untuk ditampilkan ke client. Di Finishing stage, upload preview dengan watermark.</small>
+                        <div id="progressArtPreview" style="display:none; margin-top:10px;">
+                            <img style="max-width: 200px; border-radius: 8px; border: 2px solid #e0e0e0;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Revision Remaining</label>
+                        <input type="number" id="formRevisionRemaining" value="2" min="0">
+                    </div>
+                    <div class="input-group full-width">
+                        <label>Revision History - Free (Track revisi gratis yang sudah dilakukan)</label>
+                        <textarea id="formRevisionHistoryFree" rows="3" placeholder="Contoh:&#10;- Sketching: Hair color, Skin tone&#10;- Cleaning: Clothing color"></textarea>
+                        <small>Catat revisi gratis untuk transparansi</small>
+                    </div>
+                    <div class="input-group full-width">
+                        <label>Revision History - Paid (Track revisi berbayar)</label>
+                        <textarea id="formRevisionHistoryPaid" rows="3" placeholder="Contoh:&#10;- Rendering: Background change (Rp15,000)&#10;- Finishing: Character pose (Rp15,000)"></textarea>
+                        <small>Catat revisi berbayar dengan harga per item. Total akan otomatis dihitung.</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Biaya Revisi Mayor Tambahan (Rp)</label>
+                        <input type="number" id="formRevisionCharges" value="0" min="0" placeholder="0" step="15000">
+                        <small>Rp15.000 per revisi mayor tambahan setelah jatah habis</small>
+                    </div>
+                    <div class="input-group full-width">
+                        <label>Invoice</label>
+                        <button type="button" class="btn-invoice" id="openInvoiceBuilder">
+                            <i class="fas fa-file-invoice"></i> Buat/Edit Invoice
+                        </button>
+                        <input type="hidden" id="formInvoiceData">
+                        <div id="invoicePreviewSmall" style="display:none; margin-top:10px; padding:10px; background:#f0f0f0; border-radius:8px; font-size:12px;">
+                            ✓ Invoice telah dibuat
+                        </div>
+                    </div>
+                    <div class="input-group full-width">
+                        <label>
+                            <input type="checkbox" id="formInvoiceVisible" style="width: auto; margin-right: 8px;">
+                            Invoice terlihat untuk client (buka setelah sketch approved)
+                        </label>
+                        <small>Centang ini agar client dapat melihat invoice dan melakukan pembayaran. Biarkan tidak tercentang jika masih dalam tahap konsep/sketsa.</small>
+                    </div>
+                    <div class="input-group full-width" id="googleDriveSection" style="display:none;">
+                        <label>Google Drive Link (Final Files - Only for Done status)</label>
+                        <input type="url" id="formGDriveLink" placeholder="https://drive.google.com/...">
+                        <small>Link ke folder/file hasil akhir untuk client</small>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="cancelFormBtn">Cancel</button>
+                    <button type="submit" class="btn-submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+ 
+    <!-- Invoice Builder Modal -->
+    <div id="invoiceBuilderModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="modal-close" id="invoiceBuilderClose">&times;</span>
+            <h2><i class="fas fa-file-invoice"></i> Invoice Builder</h2>
+            
+            <div style="display: grid; grid-template-columns: 400px 1fr; gap: 20px;">
+                <!-- Invoice Form -->
+                <div style="max-height: 70vh; overflow-y: auto; padding-right: 15px;">
+                    <div class="input-group">
+                        <label>Nomor Invoice</label>
+                        <input type="text" id="invoiceNumber" placeholder="INV-001">
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px 0; color: #1e3c72;">Items</h4>
+                    <div id="invoiceItemsContainer"></div>
+                    <button type="button" class="btn-new" onclick="addInvoiceItem()" style="width: 100%; margin-top: 10px;">+ Tambah Item</button>
+                    
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label>Metode Pembayaran</label>
+                        <input type="text" id="invoicePaymentMethod" value="QRIS">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Upload QRIS Code</label>
+                        <input type="file" id="invoiceQRIS" accept="image/*">
+                        <div id="qrisPreview" style="margin-top:10px; display:none;">
+                            <img style="max-width: 150px; border-radius: 8px;">
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn-submit" onclick="saveInvoiceData()" style="width: 100%; margin-top: 20px;">
+                        <i class="fas fa-save"></i> Simpan Invoice
+                    </button>
+                </div>
+                
+                <!-- Invoice Preview -->
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; max-height: 70vh; overflow-y: auto;">
+                    <h4 style="margin-bottom: 15px; color: #1e3c72;">Preview</h4>
+                    <div id="invoicePreviewContent" style="background: white; padding: 30px; border-radius: 8px; min-height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCl-vcLE4Mkwgu9A4e7_If0Bwg7fcI9uR0Y",
+            authDomain: "commission-tracker-aruda.firebaseapp.com",
+            projectId: "commission-tracker-aruda",
+            storageBucket: "commission-tracker-aruda.firebasestorage.app",
+            messagingSenderId: "344230540516",
+            appId: "1:344230540516:web:06be852d8f4472b888a8f1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+        window.firestore = { collection, addDoc, updateDoc, deleteDoc, doc, getDocs };
+    </script>
+    <script src="admin-panel.js"></script>
+</body>
+</html>
