@@ -1,0 +1,26 @@
+# Node / JS dependencies
+node_modules/
+
+# Firebase config / keys
+firebase.json
+.firebaserc
+.env
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build / dist folders
+dist/
+build/
+out/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor config
+.vscode/
+.idea/
