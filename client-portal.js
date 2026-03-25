@@ -43,7 +43,7 @@ async function handleLogin(e) {
     // Check if Firebase is ready
     if (!window.db || !window.firestore) {
         console.error('Firebase not initialized!');
-        showError('Firebase belum siap. Pastikan Anda sudah setup Firebase config.');
+        showError('Firebase belum siap. Pastikan sudah setup Firebase config.');
         return;
     }
     
@@ -226,13 +226,14 @@ function populateOverviewTab(order) {
                 </div>
                 <div class="detail-item">
                     <label>Status Pembayaran</label>
-                    <div class="value" style="color: #f57c00;">⏳ Menunggu Approval Rough Sketch</div>
+                    <div class="value" style="color: #f57c00;">⏳ Menunggu Approval Sketch</div>
                 </div>
                 <div class="detail-item" style="grid-column: 1 / -1;">
-                    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50;">
-                        <strong style="color: #2e7d32;">💰 Sistem Pembayaran: FULL PAYMENT</strong>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800;">
+                        <strong style="color: #ef6c00;">ℹ️ Sistem Pembayaran: FULL PAYMENT UPFRONT</strong>
                         <p style="margin: 10px 0 0 0; line-height: 1.8;">
-                            Pembayaran <strong>lunas 100%</strong> (${formatCurrency(actualPrice)}) setelah rough sketch disetujui.
+                            Pembayaran <strong>lunas 100%</strong> setelah sketch disetujui.
+                            <p style="margin-top: 10px; font-size: 14px; color: #666;"> + biaya revisi mayor tambahan (jika ada).</p>
                         </p>
                     </div>
                 </div>
@@ -246,13 +247,13 @@ function populateOverviewTab(order) {
                 </div>
                 <div class="detail-item">
                     <label>Status Pembayaran</label>
-                    <div class="value" style="color: #f57c00;">⏳ Menunggu Approval Rough Sketch</div>
+                    <div class="value" style="color: #f57c00;">⏳ Menunggu Approval Sketch</div>
                 </div>
                 <div class="detail-item" style="grid-column: 1 / -1;">
                     <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800;">
                         <strong style="color: #ef6c00;">ℹ️ Sistem Pembayaran: DOWN PAYMENT (DP)</strong>
                         <ol style="margin: 10px 0 0 20px; line-height: 1.8;">
-                            <li><strong>DP 50%</strong> (${formatCurrency(dpAmount)}) setelah rough sketch disetujui</li>
+                            <li><strong>DP 50%</strong> (${formatCurrency(dpAmount)}) setelah sketch disetujui</li>
                             <li><strong>Pelunasan 50%</strong> (${formatCurrency(actualPrice - dpAmount)}) setelah finishing untuk mendapatkan file final</li>
                         </ol>
                     </div>
@@ -286,8 +287,8 @@ function populateOverviewTab(order) {
                     </strong>
                     <p style="margin: 8px 0 0 0; font-size: 14px;">
                         ${order.refundable === 'yes' 
-                            ? 'Anda masih bisa request refund karena pekerjaan belum dimulai ke Visual Sketch.' 
-                            : 'Pekerjaan sudah masuk ke Visual Sketch. Refund tidak dapat dilakukan.'}
+                            ? 'Request refund masih dibolehkan, karena pekerjaan belum dimulai ke Coloured Sketch.' 
+                            : 'Pekerjaan sudah masuk ke Coloured Sketch. Refund tidak dapat dilakukan.'}
                     </p>
                 </div>
             </div>
@@ -310,12 +311,37 @@ function populateOverviewTab(order) {
                     ✅ ${formatCurrency(actualPrice + (order.revisionCharges || 0))}
                 </div>
             </div>
+            ${(order.status === 'Done' || !order.revisionCharges) ? `
             <div class="detail-item" style="grid-column: 1 / -1;">
                 <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; text-align: center;">
                     <strong style="color: #2e7d32; font-size: 16px;">🎉 Pembayaran Lunas!</strong>
-                    <p style="margin: 8px 0 0 0;">Terima kasih! File final Anda sudah tersedia.</p>
+                    <p style="margin: 8px 0 0 0;">Terima kasih! Sistem telah menerima pembayaran.</p>
                 </div>
             </div>
+            ` : `
+            <div class="detail-item" style="grid-column: 1 / -1;">
+                <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800;">
+                    <strong style="color: #ef6c00;">⚠️ Ada Biaya Revisi Tambahan</strong>
+                    <p style="margin: 8px 0 0 0; font-size: 14px; color: #555;">
+                        Pembayaran awal sudah diterima, namun terdapat biaya revisi mayor tambahan sebesar <strong>${formatCurrency(order.revisionCharges)}</strong> yang perlu dilunasi. Cek tab Invoice untuk detail pembayaran.
+                    </p>
+                </div>
+            </div>
+            `}
+            
+            <div class="detail-item" style="grid-column: 1 / -1;">
+                <div style="background: ${order.refundable === 'yes' ? '#e8f5e9' : '#ffebee'}; padding: 15px; border-radius: 8px; border-left: 4px solid ${order.refundable === 'yes' ? '#4caf50' : '#f44336'};">
+                    <strong style="color: ${order.refundable === 'yes' ? '#2e7d32' : '#c62828'};">
+                        ${order.refundable === 'yes' ? '✅ Refund Masih Tersedia' : '⚠️ No Refund Policy'}
+                    </strong>
+                    <p style="margin: 8px 0 0 0; font-size: 14px;">
+                        ${order.refundable === 'yes' 
+                            ? 'Request refund masih dibolehkan, karena pekerjaan belum dimulai ke Coloured Sketch.' 
+                            : 'Pekerjaan sudah masuk ke Coloured Sketch. Refund tidak dapat dilakukan.'}
+                    </p>
+                </div>
+            </div>
+
         `;
     }
     
@@ -502,6 +528,7 @@ function populateWorkflowTab(order) {
                         <p style="margin-top: 10px; font-size: 14px; color: #666;">
                             <strong>Revisi Mayor Tersisa:</strong> ${order.revisionRemaining} kali
                             ${order.revisionRemaining === 0 ? '<br><span style="color: #d32f2f;">⚠️ Revisi mayor setelah ini akan dikenakan biaya Rp15.000 per revisi.</span>' : ''}
+                            <br>💡 Revisi di luar ketentuan atau revisi mayor sehabis 5 kali akan dikenakan biaya tambahan Rp15.000 per revisi.
                         </p>
                     </div>
                 `;
@@ -532,9 +559,6 @@ function populateWorkflowTab(order) {
                                 ${stageRevision.next.minor.map(item => `<li>${item}</li>`).join('')}
                             </ul>
                         ` : ''}
-                        <p style="margin-top: 10px; font-size: 13px; color: #666; font-style: italic;">
-                            💡 Revisi di luar ketentuan atau revisi mayor sehabis 5 kali akan dikenakan biaya tambahan Rp15.000 per revisi.
-                        </p>
                     </div>
                 `;
             }
@@ -619,7 +643,7 @@ function populateWorkflowTab(order) {
 function populateInvoiceTab(order) {
     const invoiceFrame = document.getElementById('invoiceFrame');
     const invoicePreview = document.getElementById('invoicePreview');
-    const downloadButtons = document.querySelector('.download-buttons');
+    const downloadButtons = { style: { display: '' } }; // download buttons removed
     
     // Check if invoice is locked (not visible yet)
     if (!order.invoiceVisible && (order.paymentStatus === 'Belum Bayar' || !order.paymentStatus)) {
@@ -630,9 +654,8 @@ function populateInvoiceTab(order) {
                 </div>
                 <h3 style="color: #856404; margin-bottom: 15px;">Invoice Belum Tersedia</h3>
                 <p style="color: #666; line-height: 1.6; max-width: 500px; margin: 0 auto;">
-                    Invoice untuk <strong>DP 50%</strong> akan terbuka setelah <strong>rough sketch</strong> Anda disetujui.<br><br>
-                    Kami masih dalam tahap perencanaan dan pembuatan sketsa.<br><br>
-                    Silakan tunggu konfirmasi dari kami untuk approval sketch, kemudian invoice DP akan dibuka.
+                    Invoice akan terbuka setelah <strong>sketch</strong> sudah disetujui.<br><br>
+                    Silakan tunggu konfirmasi untuk approval sketch, kemudian invoice akan dibuka.
                 </p>
             </div>
         `;
@@ -654,26 +677,39 @@ function populateInvoiceTab(order) {
     
     const remainingAmount = fullAmount - dpAmount + (order.revisionCharges || 0);
     
-    // Check if at finishing stage - show Google Drive button
-    if (order.currentStage === 'Finishing' && order.paymentStatus === 'DP 50%') {
+    // Check if at finishing stage and payment still owed
+    const hasPendingRevisionCharges = (order.revisionCharges || 0) > 0 && order.status !== 'Done';
+    const needsPelunasan =
+        (order.currentStage === 'Finishing' && order.paymentStatus === 'DP 50%') ||
+        (order.currentStage === 'Finishing' && order.paymentStatus === 'Lunas' && hasPendingRevisionCharges);
+
+    if (needsPelunasan) {
+        const isFullPaymentWithExtra = order.paymentType === 'full' && order.paymentStatus === 'Lunas';
+        const pelunasanLabel = isFullPaymentWithExtra ? 'Biaya Revisi Tambahan' : 'Total Pelunasan';
+        const pelunasanAmount = isFullPaymentWithExtra
+            ? (order.revisionCharges || 0)
+            : remainingAmount;
+        const pelunasanBreakdown = isFullPaymentWithExtra
+            ? `Biaya revisi mayor tambahan di luar pembayaran awal`
+            : `Sisa 50%: ${formatCurrency(fullAmount - dpAmount)}${order.revisionCharges > 0 ? ` + Biaya Revisi: ${formatCurrency(order.revisionCharges)}` : ''}`;
+
         invoicePreview.innerHTML = `
             <div style="padding: 30px; text-align: center;">
-                <h2 style="color: #667eea; margin-bottom: 20px;">💳 Pelunasan untuk File Final</h2>
+                <h2 style="color: #667eea; margin-bottom: 20px;">💳 ${pelunasanLabel}</h2>
                 <p style="color: #666; margin-bottom: 20px;">Artwork Anda sudah selesai! Cek preview di tab Workflow.</p>
                 
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 16px; color: white; margin-top: 20px;">
-                    <h3 style="margin: 0 0 15px 0;">Total Pelunasan</h3>
+                    <h3 style="margin: 0 0 15px 0;">${pelunasanLabel}</h3>
                     <div style="font-size: 32px; font-weight: bold; margin: 15px 0;">
-                        ${formatCurrency(remainingAmount)}
+                        ${formatCurrency(pelunasanAmount)}
                     </div>
                     <div style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
-                        Sisa 50%: ${formatCurrency(fullAmount - dpAmount)}
-                        ${order.revisionCharges > 0 ? ` + Biaya Revisi: ${formatCurrency(order.revisionCharges)}` : ''}
+                        ${pelunasanBreakdown}
                     </div>
                     
                     ${order.invoiceData && order.invoiceData.qrisImage ? `
                         <div style="background: white; padding: 20px; border-radius: 12px; display: inline-block; margin-top: 10px;">
-                            <p style="color: #667eea; font-weight: 600; margin-bottom: 15px;">Scan QRIS untuk Pelunasan:</p>
+                            <p style="color: #667eea; font-weight: 600; margin-bottom: 15px;">Scan QRIS untuk pembayaran:</p>
                             <img src="${order.invoiceData.qrisImage}" style="max-width: 250px; border-radius: 8px;">
                         </div>
                     ` : ''}
@@ -708,7 +744,7 @@ function populateInvoiceTab(order) {
                     <i class="fas fa-check" style="font-size: 40px; color: white;"></i>
                 </div>
                 <h3 style="color: #38ef7d; margin-bottom: 15px;">Pembayaran Lunas!</h3>
-                <p style="color: #666; margin-bottom: 10px;">Terima kasih atas pembayaran penuh Anda.</p>
+                <p style="color: #666; margin-bottom: 10px;">Terima kasih atas pembayarannya.</p>
                 ${revisionCharges > 0 ? `
                     <div style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 15px; max-width: 360px; margin: 15px auto; text-align: left;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -748,7 +784,7 @@ function populateInvoiceTab(order) {
                 </div>
                 <h3 style="color: #2e7d32; margin-bottom: 12px; font-size: 22px;">DP 50% Sudah Diterima!</h3>
                 <p style="color: #555; line-height: 1.7; max-width: 480px; margin: 0 auto 25px;">
-                    Terima kasih! Pembayaran DP 50% kamu sudah kami terima dan pengerjaan sedang berlangsung.
+                    Terima kasih! Pembayaran DP 50% kamu sudah diterima dan pengerjaan sedang berlangsung.
                 </p>
 
                 <div style="background: #f3f8ff; border: 1px solid #c5d8f7; border-radius: 12px; padding: 20px; max-width: 400px; margin: 0 auto 25px; text-align: left;">
@@ -888,10 +924,11 @@ function populateInvoiceTab(order) {
                             </p>
                         </div>
                     ` : `
-                        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-top: 25px; border-left: 4px solid #4caf50;">
-                            <strong style="color: #2e7d32;">💰 Full Payment</strong>
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 25px; border-left: 4px solid #2196f3;">
+                            <strong style="color: #1565c0;">ℹ️ Kebijakan Refund:</strong>
                             <p style="margin: 8px 0 0 0; font-size: 14px; color: #555;">
-                                Setelah pembayaran penuh, pekerjaan akan langsung dimulai hingga selesai. File final akan dikirim setelah finishing.
+                                Setelah DP dibayar dan pekerjaan masuk ke tahap selanjutnya, <strong>refund tidak dapat dilakukan</strong>. 
+                                Pastikan sketch sudah sesuai sebelum melakukan pembayaran DP.
                             </p>
                         </div>
                     `}
@@ -952,8 +989,8 @@ function populateInvoiceTab(order) {
                     <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 25px; border-left: 4px solid #2196f3;">
                         <strong style="color: #1565c0;">ℹ️ Kebijakan Refund:</strong>
                         <p style="margin: 8px 0 0 0; font-size: 14px; color: #555;">
-                            Setelah DP dibayar dan pekerjaan masuk ke tahap Visual Sketch, <strong>refund tidak dapat dilakukan</strong>. 
-                            Pastikan rough sketch sudah sesuai sebelum melakukan pembayaran DP.
+                            Setelah DP dibayar dan pekerjaan masuk ke tahap selanjutnya, <strong>refund tidak dapat dilakukan</strong>. 
+                            Pastikan sketch sudah sesuai sebelum melakukan pembayaran DP.
                         </p>
                     </div>
                 </div>
@@ -975,42 +1012,14 @@ function handleGDriveClick(status, gdriveLink) {
         window.open(gdriveLink, '_blank');
     } else {
         // Payment not complete
-        alert('File final akan tersedia setelah pelunasan pembayaran.\n\nSilakan lakukan pelunasan terlebih dahulu untuk mengakses file tanpa watermark.');
+        showError('File final akan tersedia setelah pelunasan pembayaran.\n\nSilakan lakukan pelunasan terlebih dahulu untuk mengakses file tanpa watermark.');
     }
 }
 
 // Make function global
 window.handleGDriveClick = handleGDriveClick;
 
-// Download Invoice Handlers
-// Download buttons - capture invoice preview content
-document.getElementById('downloadPDF').addEventListener('click', async () => {
-    if (!selectedOrder || !selectedOrder.invoiceData) {
-        alert('Invoice belum tersedia');
-        return;
-    }
-    
-    // Use html2pdf library (need to add this to HTML)
-    const invoiceContent = document.getElementById('invoicePreview');
-    
-    try {
-        // For now, open print dialog which can save as PDF
-        const printWindow = window.open('', '', 'height=600,width=800');
-        printWindow.document.write('<html><head><title>Invoice</title>');
-        printWindow.document.write('<style>body{font-family:Arial,sans-serif;padding:20px;}</style>');
-        printWindow.document.write('</head><body>');
-        printWindow.document.write(invoiceContent.innerHTML);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        printWindow.print();
-    } catch (error) {
-        alert('Silakan screenshot invoice untuk menyimpannya');
-    }
-});
-
-document.getElementById('downloadImage').addEventListener('click', () => {
-    alert('Silakan screenshot invoice untuk menyimpannya sebagai gambar');
-});
+// Download Invoice Handlers - removed (screenshot is sufficient)
 
 // Logout Handler
 function handleLogout() {
@@ -1062,9 +1071,9 @@ function calculateProgress(status, currentStage) {
     // If waiting payment with no stage
     if (status === 'Waiting Payment') return 0;
     
-    // For Finishing stage, show 80% until Done
+    // For Finishing stage, show 85% until Done — leaves a visible gap so client sees it's not complete yet
     if (currentStage === 'Finishing' && status !== 'Done') {
-        return 80;
+        return 85;
     }
     
     if (index === -1) return 20;

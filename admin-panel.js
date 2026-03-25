@@ -231,7 +231,6 @@ function populateForm(order) {
     document.getElementById('formClientName').value = order.clientName || '';
     document.getElementById('formItemName').value = order.itemName || '';
     document.getElementById('formTotalPrice').value = order.totalPrice || '';
-    document.getElementById('formDescription').value = order.description || '';
     document.getElementById('formPaymentDeadline').value = order.paymentDeadline || '';
     document.getElementById('formDeadline').value = order.deadline || '';
     document.getElementById('formStatus').value = order.status || 'Waiting Payment';
@@ -298,7 +297,6 @@ async function handleOrderSubmit(e) {
         clientName: document.getElementById('formClientName').value,
         itemName: document.getElementById('formItemName').value,
         totalPrice: parseInt(document.getElementById('formTotalPrice').value),
-        description: document.getElementById('formDescription').value,
         paymentDeadline: document.getElementById('formPaymentDeadline').value,
         deadline: document.getElementById('formDeadline').value || null,
         status: document.getElementById('formStatus').value,
@@ -520,7 +518,6 @@ function renderInvoiceItems() {
 function updateInvoicePreview() {
     const invoiceNumber = document.getElementById('invoiceNumber').value;
     const clientName = document.getElementById('formClientName').value;
-    const clientEmail = document.getElementById('formDescription').value;
     const paymentMethod = document.getElementById('invoicePaymentMethod').value;
     
     let total = 0;
@@ -531,7 +528,7 @@ function updateInvoicePreview() {
         // Add discount description if exists
         let discountDescHTML = '';
         if (item.discount > 0 && item.discountDesc) {
-            discountDescHTML = `<div style="font-size: 12px; color: #666; opacity: 0.8; font-style: italic;">- ${item.discountDesc} (Rp${item.discount.toLocaleString('id-ID')})</div>`;
+            discountDescHTML = `<div style="font-size: 12px; color: #666; opacity: 0.8; font-style: italic;">- ${item.discountDesc}</div>`;
         }
         
         const discountNominalHTML = item.discount > 0
@@ -563,7 +560,6 @@ function updateInvoicePreview() {
         <div style="margin-bottom: 20px;">
             <strong style="color: #1e3c72;">Kepada:</strong><br>
             <div style="margin-top: 5px;">${clientName || 'Client Name'}</div>
-            <div style="color: #666; font-size: 14px;">${clientEmail || ''}</div>
         </div>
         
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
