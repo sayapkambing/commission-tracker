@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Aruda's Art Commission</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 50px 40px;
+            border-radius: 24px;
+            box-shadow: 0 30px 90px rgba(0,0,0,0.3);
+            max-width: 450px;
+            width: 100%;
+            animation: slideUp 0.6s ease-out;
+            position: relative;
+        }
+        
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #1e3c72, #2a5298, #4facfe);
+            border-radius: 24px 24px 0 0;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .login-container h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .login-container p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 35px;
+            font-size: 14px;
+        }
+        
+        .input-group {
+            margin-bottom: 22px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: max(16px, 1rem);
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #2a5298;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(30, 60, 114, 0.3);
+            min-height: 52px;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(30, 60, 114, 0.4);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+            animation: shake 0.5s;
+            text-align: center;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .back-link {
+            text-align: center;
+            margin-top: 25px;
+        }
+        
+        .back-link a {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+        
+        .back-link a:hover {
+            color: #2a5298;
+        }
+        
+        .security-note {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .security-note i {
+            color: #4caf50;
+            margin-right: 5px;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 600px) {
+            .login-container {
+                padding: 32px 20px;
+                border-radius: 18px;
+            }
+            
+            .login-container h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1><i class="fas fa-shield-alt"></i> Admin Login</h1>
+        <p>Masuk ke panel admin Aruda's Art Commission</p>
+        
+        <div class="error-message" id="errorMessage">
+            <i class="fas fa-exclamation-triangle"></i> Username atau password salah
+        </div>
+        
+        <form id="adminLoginForm">
+            <div class="input-group">
+                <label for="username"><i class="fas fa-user"></i> Username</label>
+                <input type="text" id="username" placeholder="Masukkan username" required autocomplete="username">
+            </div>
+            
+            <div class="input-group">
+                <label for="password"><i class="fas fa-lock"></i> Password</label>
+                <input type="password" id="password" placeholder="Masukkan password" required autocomplete="current-password">
+            </div>
+            
+            <button type="submit" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i> Masuk ke Dashboard
+            </button>
+        </form>
+        
+        <div class="back-link">
+            <a href="index.html"><i class="fas fa-arrow-left"></i> Kembali ke halaman utama</a>
+        </div>
+        
+        <div class="security-note">
+            <i class="fas fa-lock"></i> Halaman ini hanya untuk admin yang berwenang
+        </div>
+    </div>
+    
+    <script>
+        // Simple admin credentials (in production, use Firebase Auth or backend)
+        const ADMIN_CREDENTIALS = {
+            username: 'aruda',
+            password: 'ArudaArt2024!'  // Ganti dengan password yang aman
+        };
+        
+        document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Hide error message
+            errorMessage.classList.remove('show');
+            
+            // Validate credentials
+            if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+                // Set session
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                sessionStorage.setItem('adminLoginTime', new Date().toISOString());
+                
+                // Redirect to admin dashboard
+                window.location.href = 'hanya-ruda.html';
+            } else {
+                // Show error
+                errorMessage.textContent = 'Username atau password salah. Silakan coba lagi.';
+                errorMessage.classList.add('show');
+                
+                // Shake animation
+                errorMessage.style.animation = 'none';
+                errorMessage.offsetHeight; // Trigger reflow
+                errorMessage.style.animation = 'shake 0.5s';
+            }
+        });
+        
+        // Prevent going back to admin panel without login
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    </script>
+</body>
+</html>

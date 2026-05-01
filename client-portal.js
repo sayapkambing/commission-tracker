@@ -603,8 +603,8 @@ function populateWorkflowTab(order) {
         stageDescription.innerHTML = `
             <div class="detail-grid">
                 <div class="detail-item" style="grid-column: 1 / -1; text-align: center; padding: 30px;">
-                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                        <i class="fas fa-check" style="font-size: 40px; color: white;"></i>
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 40px; color: white;">
+                        ✓
                     </div>
                     <h3 style="color: #38ef7d; margin-bottom: 10px;">Order Selesai!</h3>
                     <p style="color: #666;">Terima kasih atas kesabarannya. Semua tahap pengerjaan telah selesai.</p>
@@ -721,7 +721,7 @@ function populateInvoiceTab(order) {
                 
                 <div style="margin-top: 30px;">
                     <button onclick="handleGDriveClick('${order.status}', '${order.gdriveLink || ''}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
-                        <i class="fas fa-folder"></i> Akses File Final di Google Drive
+                        📁 Akses File Final di Google Drive
                     </button>
                 </div>
             </div>
@@ -740,8 +740,8 @@ function populateInvoiceTab(order) {
         const totalPaid = fullAmount2 + revisionCharges;
         invoicePreview.innerHTML = `
             <div style="text-align: center; padding: 40px;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                    <i class="fas fa-check" style="font-size: 40px; color: white;"></i>
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 36px;">
+                    ✓
                 </div>
                 <h3 style="color: #38ef7d; margin-bottom: 15px;">Pembayaran Lunas!</h3>
                 <p style="color: #666; margin-bottom: 10px;">Terima kasih atas pembayarannya.</p>
@@ -767,7 +767,7 @@ function populateInvoiceTab(order) {
                         <h4 style="color: white; margin-bottom: 15px;">📦 File Final Tersedia!</h4>
                         <p style="color: white; opacity: 0.9; margin-bottom: 20px;">File tanpa watermark sudah siap didownload</p>
                         <a href="${order.gdriveLink}" target="_blank" style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 10px;">
-                            <i class="fas fa-download"></i> Download dari Google Drive
+                            ⬇ Download dari Google Drive
                         </a>
                     </div>
                 ` : ''}
@@ -1037,10 +1037,54 @@ function handleLogout() {
 
 // Utility Functions
 function showError(message) {
-    errorMessage.textContent = message;
-    errorMessage.classList.add('show');
-    setTimeout(() => {
-        errorMessage.classList.remove('show');
+    // If login screen is visible, use the inline error element
+    if (!loginScreen.classList.contains('hidden')) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add('show');
+        setTimeout(() => {
+            errorMessage.classList.remove('show');
+        }, 5000);
+        return;
+    }
+    
+    // Otherwise, show a floating toast notification (for use inside modal/dashboard)
+    let toast = document.getElementById('floatingToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'floatingToast';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #323232;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            z-index: 99999;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            white-space: pre-line;
+        `;
+        document.body.appendChild(toast);
+    }
+    
+    toast.textContent = message;
+    // Trigger animation
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    
+    clearTimeout(toast._hideTimeout);
+    toast._hideTimeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
     }, 5000);
 }
 
@@ -1063,18 +1107,14 @@ function calculateProgress(status, currentStage) {
     const stages = ['Concept', 'Sketching', 'Cleaning', 'Rendering', 'Finishing'];
     const index = stages.indexOf(currentStage);
     
-    // If waiting payment but has a stage, keep the stage progress
-    if (status === 'Waiting Payment' && index !== -1) {
-        return ((index + 1) / stages.length) * 100;
-    }
-    
-    // If waiting payment with no stage
-    if (status === 'Waiting Payment') return 0;
-    
-    // For Finishing stage, show 85% until Done — leaves a visible gap so client sees it's not complete yet
-    if (currentStage === 'Finishing' && status !== 'Done') {
+    // For Finishing stage, always show 85% until Done — check this BEFORE Waiting Payment
+    // so Finishing+WaitingPayment doesn't accidentally return 100%
+    if (currentStage === 'Finishing') {
         return 85;
     }
+    
+    // If waiting payment with no stage (or non-Finishing stage)
+    if (status === 'Waiting Payment') return index !== -1 ? ((index + 1) / stages.length) * 100 : 0;
     
     if (index === -1) return 20;
     return ((index + 1) / stages.length) * 100;
