@@ -170,8 +170,7 @@
             color: #4caf50;
             margin-right: 5px;
         }
-        
-        /* Mobile Responsive */
+
         @media (max-width: 600px) {
             .login-container {
                 padding: 32px 20px;
@@ -219,10 +218,9 @@
     </div>
     
     <script>
-        // Simple admin credentials (in production, use Firebase Auth or backend)
         const ADMIN_CREDENTIALS = {
-            username: 'aruda',
-            password: 'ArudaArt2024!'  // Ganti dengan password yang aman
+            username: 'artist',
+            password: 'fyolai'
         };
         
         document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
@@ -232,30 +230,21 @@
             const password = document.getElementById('password').value;
             const errorMessage = document.getElementById('errorMessage');
             
-            // Hide error message
             errorMessage.classList.remove('show');
             
-            // Validate credentials
             if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-                // Set session
                 sessionStorage.setItem('adminLoggedIn', 'true');
                 sessionStorage.setItem('adminLoginTime', new Date().toISOString());
-                
-                // Redirect to admin dashboard
                 window.location.href = 'hanya-ruda.html';
             } else {
-                // Show error
                 errorMessage.textContent = 'Username atau password salah. Silakan coba lagi.';
                 errorMessage.classList.add('show');
-                
-                // Shake animation
                 errorMessage.style.animation = 'none';
-                errorMessage.offsetHeight; // Trigger reflow
+                errorMessage.offsetHeight;
                 errorMessage.style.animation = 'shake 0.5s';
             }
         });
         
-        // Prevent going back to admin panel without login
         window.addEventListener('pageshow', function(event) {
             if (event.persisted) {
                 window.location.reload();

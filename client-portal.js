@@ -40,7 +40,6 @@ async function handleLogin(e) {
     
     console.log('Login attempt with code:', orderCode);
     
-    // Check if Firebase is ready
     if (!window.db || !window.firestore) {
         console.error('Firebase not initialized!');
         showError('Firebase belum siap. Pastikan sudah setup Firebase config.');
@@ -50,7 +49,6 @@ async function handleLogin(e) {
     console.log('Firebase ready, querying...');
     
     try {
-        // Query Firestore for orders with this code
         const q = window.firestore.query(
             window.firestore.collection(window.db, 'orders'),
             window.firestore.where('orderCode', '==', orderCode)
@@ -65,18 +63,15 @@ async function handleLogin(e) {
             return;
         }
         
-        // Get all orders for this client
         currentOrders = [];
         querySnapshot.forEach((doc) => {
             console.log('Order found:', doc.id, doc.data());
             currentOrders.push({ id: doc.id, ...doc.data() });
         });
         
-        // Store session
         currentClient = orderCode;
         sessionStorage.setItem('clientCode', orderCode);
         
-        // Show dashboard
         showDashboard();
         
     } catch (error) {
@@ -110,7 +105,6 @@ function createOrderCard(order) {
     card.className = 'order-card';
     card.onclick = () => openOrderDetail(order);
     
-    // Calculate actual price from invoice if exists
     let displayPrice = order.totalPrice;
     if (order.invoiceData && order.invoiceData.items) {
         displayPrice = order.invoiceData.items.reduce((total, item) => {
@@ -120,6 +114,35 @@ function createOrderCard(order) {
     
     const progress = calculateProgress(order.status, order.currentStage);
     const statusClass = getStatusClass(order.status);
+    
+    // Preview art
+    let previewArtHTML = '';
+    if (order.progressArt) {
+        previewArtHTML = `
+            <div class="order-preview-art">
+                <img src="${order.progressArt}" alt="Progress Preview">
+                <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 15px; font-size: 11px;">
+                    <i class="fas fa-image"></i> Preview
+                </div>
+            </div>
+        `;
+    }
+    
+    // Confirmation button
+    let confirmHTML = '';
+    if (order.status === 'Done' && !order.clientConfirmed) {
+        confirmHTML = `
+            <button class="btn-confirm" onclick="event.stopPropagation(); confirmOrderDone('${order.id}')">
+                <i class="fas fa-check-circle"></i> Konfirmasi Selesai
+            </button>
+        `;
+    } else if (order.clientConfirmed) {
+        confirmHTML = `
+            <div style="margin-top: 10px; text-align: center; color: #4caf50; font-size: 12px; font-weight: 600;">
+                <i class="fas fa-check-circle"></i> Telah Dikonfirmasi
+            </div>
+        `;
+    }
     
     card.innerHTML = `
         <div class="order-header">
@@ -135,10 +158,55 @@ function createOrderCard(order) {
         <div class="progress-bar">
             <div class="progress-fill" style="width: ${progress}%"></div>
         </div>
+        ${previewArtHTML}
+        ${confirmHTML}
     `;
     
     return card;
 }
+
+// Confirm Order Done
+async function confirmOrderDone(orderId) {
+    if (!confirm('Apakah kamu yakin artwork ini sudah selesai dan sesuai dengan pesanan? Konfirmasi ini akan dicatat sebagai bukti bahwa kamu telah menerima hasil artwork.')) {
+        return;
+    }
+    
+    try {
+        if (!window.db || !window.firestore) {
+            alert('✅ Terima kasih! Artwork telah dikonfirmasi selesai.\n\nKonfirmasi ini telah dicatat sebagai bukti penerimaan.');
+            
+            const order = currentOrders.find(o => o.id === orderId);
+            if (order) {
+                order.clientConfirmed = true;
+                order.clientConfirmedAt = new Date().toISOString();
+                renderOrders();
+            }
+            return;
+        }
+        
+        const orderRef = window.firestore.doc(window.db, 'orders', orderId);
+        await window.firestore.updateDoc(orderRef, {
+            clientConfirmed: true,
+            clientConfirmedAt: new Date().toISOString()
+        });
+        
+        const order = currentOrders.find(o => o.id === orderId);
+        if (order) {
+            order.clientConfirmed = true;
+            order.clientConfirmedAt = new Date().toISOString();
+            renderOrders();
+        }
+        
+        alert('✅ Terima kasih! Artwork telah dikonfirmasi selesai.\n\nKonfirmasi ini telah dicatat sebagai bukti bahwa kamu telah menerima hasil artwork.');
+        
+    } catch (error) {
+        console.error('Error confirming order:', error);
+        alert('⚠️ Gagal mengkonfirmasi. Silakan coba lagi atau hubungi admin.');
+    }
+}
+
+// Make function global
+window.confirmOrderDone = confirmOrderDone;
 
 // Open Order Detail
 function openOrderDetail(order) {
@@ -148,13 +216,8 @@ function openOrderDetail(order) {
     document.getElementById('modalStatus').className = `status-badge ${getStatusClass(order.status)}`;
     document.getElementById('modalStatus').textContent = order.status;
     
-    // Populate overview tab
     populateOverviewTab(order);
-    
-    // Populate workflow tab
     populateWorkflowTab(order);
-    
-    // Populate invoice tab
     populateInvoiceTab(order);
     
     orderModal.classList.add('show');
@@ -168,24 +231,20 @@ function closeModal() {
 
 // Switch Tab
 function switchTab(tabName) {
-    // Remove active from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
     
-    // Remove active from all tab contents
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
     
-    // Add active to selected
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
     document.getElementById(`${tabName}Tab`).classList.add('active');
 }
 
 // Populate Overview Tab
 function populateOverviewTab(order) {
-    // Calculate actual price from invoice
     let actualPrice = order.totalPrice;
     if (order.invoiceData && order.invoiceData.items) {
         actualPrice = order.invoiceData.items.reduce((total, item) => {
@@ -193,7 +252,6 @@ function populateOverviewTab(order) {
         }, 0);
     }
     
-    // Order Details (simplified)
     const orderDetailsGrid = document.getElementById('orderDetailsGrid');
     orderDetailsGrid.innerHTML = `
         <div class="detail-item">
@@ -206,19 +264,16 @@ function populateOverviewTab(order) {
         </div>
     `;
     
-    // Payment Details with DP info
     const paymentDetailsGrid = document.getElementById('paymentDetailsGrid');
     
     let paymentHTML = '';
     
-    // Calculate DP and remaining
     const dpAmount = Math.round(actualPrice * 0.5);
     const remainingAmount = actualPrice - dpAmount + (order.revisionCharges || 0);
-    const paymentType = order.paymentType || 'dp'; // default to DP
+    const paymentType = order.paymentType || 'dp';
     
     if (order.paymentStatus === 'Belum Bayar') {
         if (paymentType === 'full') {
-            // Full payment type
             paymentHTML = `
                 <div class="detail-item">
                     <label>Total Harga</label>
@@ -233,13 +288,12 @@ function populateOverviewTab(order) {
                         <strong style="color: #ef6c00;">ℹ️ Sistem Pembayaran: FULL PAYMENT UPFRONT</strong>
                         <p style="margin: 10px 0 0 0; line-height: 1.8;">
                             Pembayaran <strong>lunas 100%</strong> setelah sketch disetujui.
-                            <p style="margin-top: 10px; font-size: 14px; color: #666;"> + biaya revisi mayor tambahan (jika ada).</p>
                         </p>
+                        <p style="margin-top: 10px; font-size: 14px; color: #666;"> + biaya revisi mayor tambahan (jika ada).</p>
                     </div>
                 </div>
             `;
         } else {
-            // DP payment type
             paymentHTML = `
                 <div class="detail-item">
                     <label>Total Harga</label>
@@ -341,15 +395,47 @@ function populateOverviewTab(order) {
                     </p>
                 </div>
             </div>
-
         `;
     }
     
     paymentDetailsGrid.innerHTML = paymentHTML;
     
-    // No revision info here - moved to workflow tab
     const revisionSection = document.getElementById('revisionSection');
     revisionSection.innerHTML = '';
+    
+    // Confirmation Section
+    const confirmationSection = document.getElementById('confirmationSection');
+    if (order.status === 'Done') {
+        if (order.clientConfirmed) {
+            confirmationSection.innerHTML = `
+                <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 25px; border-radius: 16px; margin-top: 25px; text-align: center; border: 2px solid #4caf50;">
+                    <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; box-shadow: 0 4px 15px rgba(76,175,80,0.3);">
+                        <i class="fas fa-check-circle" style="font-size: 36px; color: white;"></i>
+                    </div>
+                    <h3 style="color: #2e7d32; margin-bottom: 10px;">✅ Order Telah Dikonfirmasi</h3>
+                    <p style="color: #555; margin-bottom: 5px;">Kamu telah mengkonfirmasi bahwa artwork sudah selesai dan diterima.</p>
+                    <p style="color: #777; font-size: 13px;">Dikonfirmasi pada: ${new Date(order.clientConfirmedAt).toLocaleDateString('id-ID', { 
+                        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                    })}</p>
+                </div>
+            `;
+        } else {
+            confirmationSection.innerHTML = `
+                <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); padding: 25px; border-radius: 16px; margin-top: 25px; text-align: center; border: 2px solid #ff9800;">
+                    <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; box-shadow: 0 4px 15px rgba(255,152,0,0.3);">
+                        <i class="fas fa-clipboard-check" style="font-size: 36px; color: white;"></i>
+                    </div>
+                    <h3 style="color: #e65100; margin-bottom: 10px;">📋 Menunggu Konfirmasi</h3>
+                    <p style="color: #555; margin-bottom: 15px;">Artwork kamu sudah selesai! Silakan konfirmasi bahwa artwork sudah sesuai.</p>
+                    <button onclick="confirmOrderDone('${order.id}')" style="background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%); color: white; border: none; padding: 12px 30px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(76,175,80,0.3); transition: all 0.3s ease;">
+                        <i class="fas fa-check-circle"></i> Konfirmasi Selesai
+                    </button>
+                </div>
+            `;
+        }
+    } else {
+        confirmationSection.innerHTML = '';
+    }
 }
 
 // Populate Workflow Tab
@@ -361,20 +447,17 @@ function populateWorkflowTab(order) {
     workflowStages.innerHTML = stages.map((stage, index) => {
         let stageClass = '';
         
-        // If canceled, nothing is green
         if (order.status === 'Canceled') {
             stageClass = '';
         }
-        // If Done, all green
         else if (order.status === 'Done') {
             stageClass = 'completed';
         }
-        // Otherwise, check current stage
         else {
             if (index < currentStageIndex) {
-                stageClass = 'completed'; // Green for past stages
+                stageClass = 'completed';
             } else if (index === currentStageIndex) {
-                stageClass = 'active'; // Purple for current stage
+                stageClass = 'active';
             }
         }
         
@@ -386,7 +469,6 @@ function populateWorkflowTab(order) {
         `;
     }).join('');
     
-    // Stage descriptions
     const descriptions = {
         'Concept': 'Tahap perencanaan dan brainstorming konsep artwork',
         'Sketching': 'Pembuatan sketsa awal dan komposisi',
@@ -395,7 +477,6 @@ function populateWorkflowTab(order) {
         'Finishing': 'Touch-up akhir dan quality check'
     };
     
-    // Detailed revision info per stage
     const revisionDetails = {
         'Concept': {
             current: ['Revisi atau request apa saja'],
@@ -452,7 +533,6 @@ function populateWorkflowTab(order) {
     
     let progressArtHTML = '';
     if (order.progressArt) {
-        // Build revision history HTML to show beside art
         let revisionHistoryHTML = '';
         if (order.revisionHistoryFree && order.revisionHistoryFree.trim()) {
             revisionHistoryHTML += `
@@ -487,7 +567,6 @@ function populateWorkflowTab(order) {
         `;
     }
     
-    // Revision Info - only show if NOT Done or Canceled
     let revisionHTML = '';
     const canShowRevision = order.status !== 'Done' && order.status !== 'Canceled';
     
@@ -497,9 +576,7 @@ function populateWorkflowTab(order) {
         if (stageRevision) {
             let currentRevisionHTML = '';
             
-            // Show current stage revision
             if (Array.isArray(stageRevision.current)) {
-                // Concept stage - anything goes
                 currentRevisionHTML = `
                     <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                         <strong style="color: #2e7d32;">✅ Revisi di Stage ${order.currentStage}:</strong>
@@ -509,7 +586,6 @@ function populateWorkflowTab(order) {
                     </div>
                 `;
             } else {
-                // Other stages - mayor/minor
                 currentRevisionHTML = `
                     <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                         <strong style="color: #2e7d32;">✅ Revisi di Stage ${order.currentStage}:</strong>
@@ -534,7 +610,6 @@ function populateWorkflowTab(order) {
                 `;
             }
             
-            // Show next stage info
             let nextStageHTML = '';
             if (stageRevision.next.stage === 'Done') {
                 nextStageHTML = `
@@ -575,7 +650,6 @@ function populateWorkflowTab(order) {
         }
     }
     
-    // Calculate time since last update
     let lastUpdateText = 'Tidak ada update';
     if (order.updatedAt) {
         const lastUpdate = new Date(order.updatedAt);
@@ -598,13 +672,12 @@ function populateWorkflowTab(order) {
     
     const stageDescription = document.getElementById('stageDescription');
     
-    // If done, show completion message
     if (order.status === 'Done') {
         stageDescription.innerHTML = `
             <div class="detail-grid">
                 <div class="detail-item" style="grid-column: 1 / -1; text-align: center; padding: 30px;">
-                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 40px; color: white;">
-                        ✓
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="fas fa-check" style="font-size: 40px; color: white;"></i>
                     </div>
                     <h3 style="color: #38ef7d; margin-bottom: 10px;">Order Selesai!</h3>
                     <p style="color: #666;">Terima kasih atas kesabarannya. Semua tahap pengerjaan telah selesai.</p>
@@ -643,9 +716,8 @@ function populateWorkflowTab(order) {
 function populateInvoiceTab(order) {
     const invoiceFrame = document.getElementById('invoiceFrame');
     const invoicePreview = document.getElementById('invoicePreview');
-    const downloadButtons = { style: { display: '' } }; // download buttons removed
+    const downloadButtons = { style: { display: '' } };
     
-    // Check if invoice is locked (not visible yet)
     if (!order.invoiceVisible && (order.paymentStatus === 'Belum Bayar' || !order.paymentStatus)) {
         invoicePreview.innerHTML = `
             <div style="text-align: center; padding: 60px 40px;">
@@ -664,7 +736,6 @@ function populateInvoiceTab(order) {
         return;
     }
     
-    // Calculate amounts
     const dpAmount = Math.round((order.invoiceData && order.invoiceData.items ? 
         order.invoiceData.items.reduce((total, item) => {
             return total + ((item.price * item.quantity) - (item.discount || 0));
@@ -677,7 +748,6 @@ function populateInvoiceTab(order) {
     
     const remainingAmount = fullAmount - dpAmount + (order.revisionCharges || 0);
     
-    // Check if at finishing stage and payment still owed
     const hasPendingRevisionCharges = (order.revisionCharges || 0) > 0 && order.status !== 'Done';
     const needsPelunasan =
         (order.currentStage === 'Finishing' && order.paymentStatus === 'DP 50%') ||
@@ -721,7 +791,7 @@ function populateInvoiceTab(order) {
                 
                 <div style="margin-top: 30px;">
                     <button onclick="handleGDriveClick('${order.status}', '${order.gdriveLink || ''}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
-                        📁 Akses File Final di Google Drive
+                        <i class="fas fa-folder"></i> Akses File Final di Google Drive
                     </button>
                 </div>
             </div>
@@ -731,7 +801,6 @@ function populateInvoiceTab(order) {
         return;
     }
     
-    // Check if payment is complete
     if (order.paymentStatus === 'Lunas') {
         const revisionCharges = order.revisionCharges || 0;
         const fullAmount2 = order.invoiceData && order.invoiceData.items ?
@@ -740,8 +809,8 @@ function populateInvoiceTab(order) {
         const totalPaid = fullAmount2 + revisionCharges;
         invoicePreview.innerHTML = `
             <div style="text-align: center; padding: 40px;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 36px;">
-                    ✓
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <i class="fas fa-check" style="font-size: 40px; color: white;"></i>
                 </div>
                 <h3 style="color: #38ef7d; margin-bottom: 15px;">Pembayaran Lunas!</h3>
                 <p style="color: #666; margin-bottom: 10px;">Terima kasih atas pembayarannya.</p>
@@ -767,7 +836,7 @@ function populateInvoiceTab(order) {
                         <h4 style="color: white; margin-bottom: 15px;">📦 File Final Tersedia!</h4>
                         <p style="color: white; opacity: 0.9; margin-bottom: 20px;">File tanpa watermark sudah siap didownload</p>
                         <a href="${order.gdriveLink}" target="_blank" style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 10px;">
-                            ⬇ Download dari Google Drive
+                            <i class="fas fa-download"></i> Download dari Google Drive
                         </a>
                     </div>
                 ` : ''}
@@ -776,7 +845,6 @@ function populateInvoiceTab(order) {
         invoiceFrame.style.display = 'none';
         downloadButtons.style.display = 'none';
     } else if (order.paymentStatus === 'DP 50%' && order.currentStage !== 'Finishing') {
-        // DP already paid but not yet at finishing — show confirmation instead of confusing DP invoice
         invoicePreview.innerHTML = `
             <div style="text-align: center; padding: 50px 30px;">
                 <div style="width: 90px; height: 90px; background: linear-gradient(135deg, #4caf50 0%, #81c784 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px; box-shadow: 0 8px 24px rgba(76,175,80,0.3);">
@@ -809,7 +877,6 @@ function populateInvoiceTab(order) {
         invoiceFrame.style.display = 'none';
         downloadButtons.style.display = 'none';
     } else if (order.invoiceData) {
-        // Show invoice based on payment type
         const invoice = order.invoiceData;
         const paymentType = order.paymentType || 'dp';
         let total = 0;
@@ -817,7 +884,6 @@ function populateInvoiceTab(order) {
             const itemTotal = (item.price * item.quantity) - (item.discount || 0);
             total += itemTotal;
             
-            // Add discount description if exists
             let discountDescHTML = '';
             if (item.discount > 0 && item.discountDesc) {
                 discountDescHTML = `<div style="font-size: 12px; color: #666; opacity: 0.8; font-style: italic; margin-top: 3px;">- ${item.discountDesc} (Rp${item.discount.toLocaleString('id-ID')})</div>`;
@@ -844,9 +910,7 @@ function populateInvoiceTab(order) {
         
         const dpTotal = Math.round(total * 0.5);
         
-        // Choose invoice format based on payment type
         if (paymentType === 'full') {
-            // FULL PAYMENT INVOICE
             const revisionCharges = order.revisionCharges || 0;
             const grandTotal = total + revisionCharges;
             const revisionRowHTML = revisionCharges > 0 ? `
@@ -935,7 +999,6 @@ function populateInvoiceTab(order) {
                 </div>
             `;
         } else {
-            // DP PAYMENT INVOICE
             invoicePreview.innerHTML = `
                 <div style="padding: 30px;">
                     <div style="border-bottom: 3px solid #667eea; padding-bottom: 15px; margin-bottom: 20px;">
@@ -1008,18 +1071,13 @@ function populateInvoiceTab(order) {
 // Handle Google Drive button click
 function handleGDriveClick(status, gdriveLink) {
     if (status === 'Done' && gdriveLink) {
-        // Payment complete - open Google Drive
         window.open(gdriveLink, '_blank');
     } else {
-        // Payment not complete
         showError('File final akan tersedia setelah pelunasan pembayaran.\n\nSilakan lakukan pelunasan terlebih dahulu untuk mengakses file tanpa watermark.');
     }
 }
 
-// Make function global
 window.handleGDriveClick = handleGDriveClick;
-
-// Download Invoice Handlers - removed (screenshot is sufficient)
 
 // Logout Handler
 function handleLogout() {
@@ -1037,54 +1095,10 @@ function handleLogout() {
 
 // Utility Functions
 function showError(message) {
-    // If login screen is visible, use the inline error element
-    if (!loginScreen.classList.contains('hidden')) {
-        errorMessage.textContent = message;
-        errorMessage.classList.add('show');
-        setTimeout(() => {
-            errorMessage.classList.remove('show');
-        }, 5000);
-        return;
-    }
-    
-    // Otherwise, show a floating toast notification (for use inside modal/dashboard)
-    let toast = document.getElementById('floatingToast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'floatingToast';
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: #323232;
-            color: white;
-            padding: 14px 24px;
-            border-radius: 10px;
-            font-size: 14px;
-            line-height: 1.5;
-            max-width: 420px;
-            text-align: center;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-            z-index: 99999;
-            opacity: 0;
-            transition: opacity 0.3s, transform 0.3s;
-            white-space: pre-line;
-        `;
-        document.body.appendChild(toast);
-    }
-    
-    toast.textContent = message;
-    // Trigger animation
-    requestAnimationFrame(() => {
-        toast.style.opacity = '1';
-        toast.style.transform = 'translateX(-50%) translateY(0)';
-    });
-    
-    clearTimeout(toast._hideTimeout);
-    toast._hideTimeout = setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(-50%) translateY(20px)';
+    errorMessage.textContent = message;
+    errorMessage.classList.add('show');
+    setTimeout(() => {
+        errorMessage.classList.remove('show');
     }, 5000);
 }
 
@@ -1107,14 +1121,15 @@ function calculateProgress(status, currentStage) {
     const stages = ['Concept', 'Sketching', 'Cleaning', 'Rendering', 'Finishing'];
     const index = stages.indexOf(currentStage);
     
-    // For Finishing stage, always show 85% until Done — check this BEFORE Waiting Payment
-    // so Finishing+WaitingPayment doesn't accidentally return 100%
-    if (currentStage === 'Finishing') {
-        return 85;
+    if (status === 'Waiting Payment' && index !== -1) {
+        return ((index + 1) / stages.length) * 100;
     }
     
-    // If waiting payment with no stage (or non-Finishing stage)
-    if (status === 'Waiting Payment') return index !== -1 ? ((index + 1) / stages.length) * 100 : 0;
+    if (status === 'Waiting Payment') return 0;
+    
+    if (currentStage === 'Finishing' && status !== 'Done') {
+        return 85;
+    }
     
     if (index === -1) return 20;
     return ((index + 1) / stages.length) * 100;
@@ -1140,7 +1155,6 @@ window.addEventListener('load', async () => {
     const savedCode = sessionStorage.getItem('clientCode');
     if (savedCode) {
         document.getElementById('orderCode').value = savedCode;
-        // Auto-login
         loginForm.dispatchEvent(new Event('submit'));
     }
 });

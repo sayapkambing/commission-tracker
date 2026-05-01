@@ -110,11 +110,9 @@ body::before {
     padding: 14px 18px;
     border: 2px solid #e8e8e8;
     border-radius: 12px;
-    font-size: 16px;
+    font-size: max(16px, 1rem);
     transition: all 0.3s ease;
     background: #fafafa;
-    /* Prevent iOS zoom on focus */
-    font-size: max(16px, 1rem);
 }
 
 .input-group input:focus {
@@ -137,7 +135,6 @@ body::before {
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-    /* Comfortable tap target */
     min-height: 52px;
     touch-action: manipulation;
 }
@@ -373,6 +370,66 @@ body::before {
     background-clip: text;
 }
 
+/* ─── Order Preview Art ─── */
+.order-preview-art {
+    margin-top: 15px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.order-preview-art img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.order-preview-art:hover img {
+    transform: scale(1.05);
+}
+
+.order-preview-art::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(transparent, rgba(0,0,0,0.5));
+    pointer-events: none;
+}
+
+/* ─── Confirm Button ─── */
+.btn-confirm {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #30cfd0 0%, #38ef7d 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(48, 207, 208, 0.2);
+    min-height: 44px;
+    touch-action: manipulation;
+    margin-top: 10px;
+}
+
+.btn-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(48, 207, 208, 0.4);
+}
+
+.btn-confirm:active {
+    transform: translateY(0);
+}
+
 /* ─── Status Badges ─── */
 .status-badge {
     padding: 6px 14px;
@@ -485,7 +542,7 @@ body::before {
 .modal-header {
     margin-bottom: 24px;
     padding-bottom: 20px;
-    padding-right: 40px;          /* keep space for close button */
+    padding-right: 40px;
     border-bottom: 2px solid #f0f0f0;
     display: flex;
     justify-content: space-between;
@@ -830,14 +887,13 @@ body::before {
     /* Modal — full-width on mobile */
     .modal {
         padding: 0;
-        align-items: flex-end;   /* sheet slides up from bottom */
+        align-items: flex-end;
     }
 
     .modal-content {
         margin: 0 auto;
         border-radius: 20px 20px 0 0;
         padding: 24px 16px 32px;
-        /* Full height minus safe area */
         max-height: 92dvh;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
@@ -882,7 +938,6 @@ body::before {
     }
 
     .workflow-stages::before {
-        /* Vertical connector line */
         top: 25px;
         bottom: 25px;
         left: 24px;

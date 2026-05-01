@@ -17,7 +17,6 @@ const waitForFirebase = () => {
             }
         }, 100);
         
-        // Timeout after 10 seconds
         setTimeout(() => {
             if (!isFirebaseReady) {
                 clearInterval(checkFirebase);
@@ -63,7 +62,6 @@ window.addEventListener('load', async () => {
     console.log('Page loaded, waiting for Firebase...');
     await waitForFirebase();
     
-    // Check if Firebase config is set
     if (!isFirebaseReady) {
         console.warn('Firebase not available, using localStorage instead');
         alert('⚠️ Firebase belum dikonfigurasi.\n\nAnda bisa:\n1. Setup Firebase (lihat README.md)\n2. Atau gunakan mode demo dengan localStorage (data hanya tersimpan di browser ini)');
@@ -83,7 +81,6 @@ function compressImage(file, maxSizeKB = 800) {
                 let width = img.width;
                 let height = img.height;
                 
-                // Calculate new dimensions (max 1200px)
                 const maxDimension = 1200;
                 if (width > height && width > maxDimension) {
                     height = (height * maxDimension) / width;
@@ -99,11 +96,9 @@ function compressImage(file, maxSizeKB = 800) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Start with quality 0.7
                 let quality = 0.7;
                 let result = canvas.toDataURL('image/jpeg', quality);
                 
-                // Reduce quality if still too large
                 while (result.length > maxSizeKB * 1024 * 1.37 && quality > 0.1) {
                     quality -= 0.1;
                     result = canvas.toDataURL('image/jpeg', quality);
@@ -124,7 +119,6 @@ function compressImage(file, maxSizeKB = 800) {
 async function loadOrders() {
     if (!isFirebaseReady) {
         console.log('Loading from localStorage...');
-        // Use localStorage as fallback
         const savedOrders = localStorage.getItem('orders');
         if (savedOrders) {
             currentOrders = JSON.parse(savedOrders);
@@ -159,12 +153,11 @@ function renderOrders() {
     ordersTableBody.innerHTML = '';
     
     if (currentOrders.length === 0) {
-        ordersTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#999;">Belum ada order. Klik "New Order" untuk menambah.</td></tr>';
+        ordersTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:#999;">Belum ada order. Klik "New Order" untuk menambah.</td></tr>';
         return;
     }
     
     currentOrders.forEach(order => {
-        // Calculate price from invoice if exists
         let displayPrice = order.totalPrice;
         if (order.invoiceData && order.invoiceData.items) {
             displayPrice = order.invoiceData.items.reduce((total, item) => {
@@ -172,11 +165,24 @@ function renderOrders() {
             }, 0);
         }
         
+        // Status konfirmasi client
+        let confirmationStatus = '';
+        if (order.status === 'Done') {
+            if (order.clientConfirmed) {
+                confirmationStatus = '<span style="color: #4caf50; font-weight: 600;">✅ Dikonfirmasi</span>';
+            } else {
+                confirmationStatus = '<span style="color: #ff9800; font-weight: 600;">⏳ Menunggu</span>';
+            }
+        } else {
+            confirmationStatus = '<span style="color: #999;">-</span>';
+        }
+        
         const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${order.orderCode}</strong></td>
             <td>${order.clientName}</td>
             <td><span class="status-badge ${getStatusClass(order.status)}">${order.status}</span></td>
+            <td>${confirmationStatus}</td>
             <td>${formatCurrency(displayPrice)}</td>
             <td>
                 <button class="btn-edit" onclick="editOrder('${order.id}')">Edit</button>
@@ -192,10 +198,15 @@ function updateStats() {
     const waiting = currentOrders.filter(o => o.status === 'Waiting Payment').length;
     const progress = currentOrders.filter(o => o.status === 'In Progress').length;
     const done = currentOrders.filter(o => o.status === 'Done').length;
+    const needConfirmation = currentOrders.filter(o => o.status === 'Done' && !o.clientConfirmed).length;
     
     document.getElementById('waitingCount').textContent = waiting;
     document.getElementById('progressCount').textContent = progress;
     document.getElementById('doneCount').textContent = done;
+    
+    if (document.getElementById('confirmCount')) {
+        document.getElementById('confirmCount').textContent = needConfirmation;
+    }
 }
 
 // Open Order Form
@@ -250,7 +261,6 @@ function populateForm(order) {
         document.getElementById('invoicePreviewSmall').style.display = 'block';
     }
     
-    // Show Google Drive if status is Done
     if (order.status === 'Done') {
         document.getElementById('googleDriveSection').style.display = 'block';
     }
@@ -261,20 +271,17 @@ function calculateRevisionCharges() {
     const paidText = document.getElementById('formRevisionHistoryPaid').value;
     if (!paidText) return 0;
     
-    // Find all Rp amounts in the text (Rp15,000 or Rp15000)
     const matches = paidText.match(/Rp\s?[\d,]+/g);
     if (!matches) return 0;
     
     let total = 0;
     matches.forEach(match => {
-        // Remove "Rp" and commas, then parse
         const amount = parseInt(match.replace(/Rp\s?|,/g, ''));
         if (!isNaN(amount)) {
             total += amount;
         }
     });
     
-    // Update the field display
     document.getElementById('formRevisionCharges').value = total;
     return total;
 }
@@ -318,13 +325,11 @@ async function handleOrderSubmit(e) {
     
     console.log('Order data prepared:', orderData);
     
-    // Add invoice data if created
     if (currentInvoiceData) {
         orderData.invoiceData = currentInvoiceData;
         console.log('Invoice data added to order');
     }
     
-    // Handle file uploads
     const progressArtFile = document.getElementById('formProgressArt').files[0];
     
     if (progressArtFile) {
@@ -348,7 +353,6 @@ async function saveOrder(orderData) {
     
     if (!isFirebaseReady) {
         console.log('Using localStorage fallback...');
-        // Use localStorage as fallback
         if (editingOrderId) {
             const index = currentOrders.findIndex(o => o.id === editingOrderId);
             if (index !== -1) {
@@ -411,7 +415,6 @@ async function deleteOrder(orderId) {
     if (!confirm('Yakin ingin menghapus order ini?')) return;
     
     if (!isFirebaseReady) {
-        // Use localStorage
         currentOrders = currentOrders.filter(o => o.id !== orderId);
         localStorage.setItem('orders', JSON.stringify(currentOrders));
         alert('Order berhasil dihapus (localStorage)!');
@@ -434,15 +437,12 @@ async function deleteOrder(orderId) {
 
 // Invoice Builder Functions
 function openInvoiceBuilder() {
-    // Pre-fill with order data
     const clientName = document.getElementById('formClientName').value;
     const orderCode = document.getElementById('formOrderCode').value;
     
     if (currentInvoiceData) {
-        // Load existing invoice
         loadInvoiceData(currentInvoiceData);
     } else {
-        // Create new invoice
         invoiceItems = [{
             name: document.getElementById('formItemName').value || '',
             price: parseInt(document.getElementById('formTotalPrice').value) || 0,
@@ -525,7 +525,6 @@ function updateInvoicePreview() {
         const itemTotal = (item.price * item.quantity) - (item.discount || 0);
         total += itemTotal;
         
-        // Add discount description if exists
         let discountDescHTML = '';
         if (item.discount > 0 && item.discountDesc) {
             discountDescHTML = `<div style="font-size: 12px; color: #666; opacity: 0.8; font-style: italic;">- ${item.discountDesc}</div>`;
