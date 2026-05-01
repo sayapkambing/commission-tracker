@@ -173,55 +173,71 @@ function createOrderCard(order) {
 
 // Confirm Order Done
 async function confirmOrderDone(orderId) {
-    console.log('confirmOrderDone called with orderId:', orderId);
+    console.log('=== confirmOrderDone START ===');
+    console.log('orderId:', orderId);
+    console.log('window.db exists:', !!window.db);
+    console.log('window.firestore exists:', !!window.firestore);
     
     if (!confirm('Apakah kamu yakin artwork ini sudah selesai dan sesuai dengan pesanan? Konfirmasi ini akan dicatat sebagai bukti bahwa kamu telah menerima hasil artwork.')) {
         return;
     }
     
     try {
-        // Update local state dulu (selalu lakukan)
         const order = currentOrders.find(o => o.id === orderId);
         if (!order) {
-            console.error('Order not found in currentOrders');
+            console.error('❌ Order not found in currentOrders');
             alert('⚠️ Order tidak ditemukan.');
             return;
         }
         
+        console.log('✅ Order found:', order.orderCode);
+        
+        // Update local
         order.clientConfirmed = true;
         order.clientConfirmedAt = new Date().toISOString();
+        console.log('✅ Local state updated');
         
-        // Render ulang dashboard
-        renderOrders();
-        
-        // Update modal jika sedang terbuka
-        if (selectedOrder && selectedOrder.id === orderId) {
-            populateOverviewTab(order);
-        }
-        
-        // Coba update Firebase jika tersedia
-        if (window.db && window.firestore) {
+        // Try Firebase
+        if (window.db && window.firestore && window.firestore.doc && window.firestore.updateDoc) {
             try {
-                console.log('Updating Firestore...');
+                console.log('🔄 Trying Firestore update...');
                 const orderRef = window.firestore.doc(window.db, 'orders', orderId);
+                console.log('orderRef:', orderRef);
+                
                 await window.firestore.updateDoc(orderRef, {
                     clientConfirmed: true,
                     clientConfirmedAt: new Date().toISOString()
                 });
-                console.log('Firestore updated successfully!');
+                
+                console.log('✅ Firestore updated successfully!');
             } catch (firebaseError) {
-                console.log('Firebase update skipped (might be offline or no permission):', firebaseError.message);
-                // Tetap lanjut — data lokal sudah terupdate
+                console.error('❌ Firestore update error:', firebaseError);
+                console.error('Error code:', firebaseError.code);
+                console.error('Error message:', firebaseError.message);
+                alert('⚠️ Gagal update ke server: ' + firebaseError.message + '\n\nData hanya tersimpan lokal. Coba refresh halaman.');
             }
         } else {
-            console.log('Firebase not available, confirmation saved locally only');
+            console.warn('⚠️ Firebase not fully available');
+            console.log('window.db:', typeof window.db);
+            console.log('window.firestore:', window.firestore);
+            if (window.firestore) {
+                console.log('firestore.doc:', typeof window.firestore.doc);
+                console.log('firestore.updateDoc:', typeof window.firestore.updateDoc);
+            }
         }
         
-        alert('✅ Terima kasih! Artwork telah dikonfirmasi selesai.\n\nKonfirmasi ini telah dicatat sebagai bukti bahwa kamu telah menerima hasil artwork.');
+        // Render ulang
+        renderOrders();
+        if (selectedOrder && selectedOrder.id === orderId) {
+            populateOverviewTab(order);
+        }
+        
+        console.log('=== confirmOrderDone END ===');
+        alert('✅ Terima kasih! Artwork telah dikonfirmasi selesai.');
         
     } catch (error) {
-        console.error('Error confirming order:', error);
-        alert('⚠️ Gagal mengkonfirmasi: ' + error.message + '\n\nSilakan coba lagi atau hubungi admin.');
+        console.error('❌ Fatal error:', error);
+        alert('⚠️ Gagal: ' + error.message);
     }
 }
 
