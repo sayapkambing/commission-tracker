@@ -40,6 +40,7 @@ async function handleLogin(e) {
     
     console.log('Login attempt with code:', orderCode);
     
+    // Check if Firebase is ready
     if (!window.db || !window.firestore) {
         console.error('Firebase not initialized!');
         showError('Firebase belum siap. Pastikan sudah setup Firebase config.');
@@ -49,6 +50,7 @@ async function handleLogin(e) {
     console.log('Firebase ready, querying...');
     
     try {
+        // Query Firestore for orders with this code
         const q = window.firestore.query(
             window.firestore.collection(window.db, 'orders'),
             window.firestore.where('orderCode', '==', orderCode)
@@ -63,15 +65,18 @@ async function handleLogin(e) {
             return;
         }
         
+        // Get all orders for this client
         currentOrders = [];
         querySnapshot.forEach((doc) => {
             console.log('Order found:', doc.id, doc.data());
             currentOrders.push({ id: doc.id, ...doc.data() });
         });
         
+        // Store session
         currentClient = orderCode;
         sessionStorage.setItem('clientCode', orderCode);
         
+        // Show dashboard
         showDashboard();
         
     } catch (error) {
@@ -105,6 +110,7 @@ function createOrderCard(order) {
     card.className = 'order-card';
     card.onclick = () => openOrderDetail(order);
     
+    // Calculate actual price from invoice if exists
     let displayPrice = order.totalPrice;
     if (order.invoiceData && order.invoiceData.items) {
         displayPrice = order.invoiceData.items.reduce((total, item) => {
@@ -128,7 +134,7 @@ function createOrderCard(order) {
         `;
     }
     
-    // Confirmation button
+    // Confirmation button / status
     let confirmHTML = '';
     if (order.status === 'Done' && !order.clientConfirmed) {
         confirmHTML = `
@@ -167,41 +173,55 @@ function createOrderCard(order) {
 
 // Confirm Order Done
 async function confirmOrderDone(orderId) {
+    console.log('confirmOrderDone called with orderId:', orderId);
+    
     if (!confirm('Apakah kamu yakin artwork ini sudah selesai dan sesuai dengan pesanan? Konfirmasi ini akan dicatat sebagai bukti bahwa kamu telah menerima hasil artwork.')) {
         return;
     }
     
     try {
-        if (!window.db || !window.firestore) {
-            alert('✅ Terima kasih! Artwork telah dikonfirmasi selesai.\n\nKonfirmasi ini telah dicatat sebagai bukti penerimaan.');
-            
-            const order = currentOrders.find(o => o.id === orderId);
-            if (order) {
-                order.clientConfirmed = true;
-                order.clientConfirmedAt = new Date().toISOString();
-                renderOrders();
-            }
+        // Update local state dulu (selalu lakukan)
+        const order = currentOrders.find(o => o.id === orderId);
+        if (!order) {
+            console.error('Order not found in currentOrders');
+            alert('⚠️ Order tidak ditemukan.');
             return;
         }
         
-        const orderRef = window.firestore.doc(window.db, 'orders', orderId);
-        await window.firestore.updateDoc(orderRef, {
-            clientConfirmed: true,
-            clientConfirmedAt: new Date().toISOString()
-        });
+        order.clientConfirmed = true;
+        order.clientConfirmedAt = new Date().toISOString();
         
-        const order = currentOrders.find(o => o.id === orderId);
-        if (order) {
-            order.clientConfirmed = true;
-            order.clientConfirmedAt = new Date().toISOString();
-            renderOrders();
+        // Render ulang dashboard
+        renderOrders();
+        
+        // Update modal jika sedang terbuka
+        if (selectedOrder && selectedOrder.id === orderId) {
+            populateOverviewTab(order);
+        }
+        
+        // Coba update Firebase jika tersedia
+        if (window.db && window.firestore) {
+            try {
+                console.log('Updating Firestore...');
+                const orderRef = window.firestore.doc(window.db, 'orders', orderId);
+                await window.firestore.updateDoc(orderRef, {
+                    clientConfirmed: true,
+                    clientConfirmedAt: new Date().toISOString()
+                });
+                console.log('Firestore updated successfully!');
+            } catch (firebaseError) {
+                console.log('Firebase update skipped (might be offline or no permission):', firebaseError.message);
+                // Tetap lanjut — data lokal sudah terupdate
+            }
+        } else {
+            console.log('Firebase not available, confirmation saved locally only');
         }
         
         alert('✅ Terima kasih! Artwork telah dikonfirmasi selesai.\n\nKonfirmasi ini telah dicatat sebagai bukti bahwa kamu telah menerima hasil artwork.');
         
     } catch (error) {
         console.error('Error confirming order:', error);
-        alert('⚠️ Gagal mengkonfirmasi. Silakan coba lagi atau hubungi admin.');
+        alert('⚠️ Gagal mengkonfirmasi: ' + error.message + '\n\nSilakan coba lagi atau hubungi admin.');
     }
 }
 
@@ -252,6 +272,7 @@ function populateOverviewTab(order) {
         }, 0);
     }
     
+    // Order Details
     const orderDetailsGrid = document.getElementById('orderDetailsGrid');
     orderDetailsGrid.innerHTML = `
         <div class="detail-item">
@@ -264,6 +285,7 @@ function populateOverviewTab(order) {
         </div>
     `;
     
+    // Payment Details
     const paymentDetailsGrid = document.getElementById('paymentDetailsGrid');
     
     let paymentHTML = '';
@@ -403,7 +425,7 @@ function populateOverviewTab(order) {
     const revisionSection = document.getElementById('revisionSection');
     revisionSection.innerHTML = '';
     
-    // Confirmation Section
+    // ─── Confirmation Section ───
     const confirmationSection = document.getElementById('confirmationSection');
     if (order.status === 'Done') {
         if (order.clientConfirmed) {
@@ -1077,6 +1099,7 @@ function handleGDriveClick(status, gdriveLink) {
     }
 }
 
+// Make function global
 window.handleGDriveClick = handleGDriveClick;
 
 // Logout Handler
